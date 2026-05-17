@@ -65,3 +65,14 @@ def upload():
     f = request.files["file"]
     f.save(f"/uploads/{f.filename}")
     return "ok"
+
+# XSS-004: Markup() marks user input as safe HTML
+@app.route("/greet", methods=["GET"])
+def greet():
+    name = request.args.get("name", "")
+    return Markup("<h1>Hello " + name + "</h1>")
+
+# XSS-005: render_template_string with user input (also SSTI)
+@app.route("/render", methods=["GET"])
+def render():
+    return render_template_string(request.args.get("t", ""))

@@ -43,4 +43,13 @@ public class VulnerableService {
         String filename = file.getOriginalFilename();
         file.transferTo(new File("/uploads/" + filename));
     }
+
+    // XSS-001: Reflected XSS via response writer
+    public void renderName(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String name = request.getParameter("name");
+        response.getWriter().write("<h1>Hello " + name + "</h1>");
+    }
+
+    // XSS-002: Unescaped Thymeleaf
+    // th:utext="*{userBio}" — renders raw HTML from user input
 }

@@ -3,7 +3,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
+from .rules import ALL_RULES
 from .rules.base import Finding, Severity
+
+_SARIF_LEVEL = {
+    Severity.CRITICAL: "error",
+    Severity.HIGH: "error",
+    Severity.MEDIUM: "warning",
+    Severity.LOW: "note",
+}
 
 SEVERITY_COLOR = {
     Severity.CRITICAL: "#dc2626",
@@ -18,6 +26,64 @@ SEVERITY_BG = {
     Severity.MEDIUM: "#fffbeb",
     Severity.LOW: "#f7fee7",
 }
+
+
+def to_sarif(findings: List[Finding], target_path: str) -> str:
+    rule_ids_used = {f.rule_id for f in findings}
+    rule_map = {r.id: r for r in ALL_RULES if r.id in rule_ids_used}
+
+    sarif_rules = [
+        {
+            "id": r.id,
+            "name": r.name.replace(" ", ""),
+            "shortDescription": {"text": r.name},
+            "fullDescription": {"text": r.description},
+            "helpUri": f"https://cwe.mitre.org/data/definitions/{r.cwe.split('-')[1]}.html",
+            "properties": {
+                "tags": [r.cwe, r.severity.value],
+                "security-severity": {"CRITICAL": "9.5", "HIGH": "8.0", "MEDIUM": "5.0", "LOW": "2.0"}[r.severity.value],
+            },
+        }
+        for r in rule_map.values()
+    ]
+
+    results = []
+    base = Path(target_path).resolve()
+    for f in findings:
+        try:
+            rel = Path(f.file_path).resolve().relative_to(base)
+            uri = str(rel).replace("\\", "/")
+        except ValueError:
+            uri = str(Path(f.file_path)).replace("\\", "/")
+
+        results.append({
+            "ruleId": f.rule_id,
+            "level": _SARIF_LEVEL[f.severity],
+            "message": {"text": f.description},
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": {"uri": uri, "uriBaseId": "%SRCROOT%"},
+                    "region": {"startLine": f.line_number},
+                }
+            }],
+        })
+
+    sarif = {
+        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name": "sast-scanner-py",
+                    "version": "1.0.0",
+                    "informationUri": "https://github.com/nicolasvl11/sast-scanner-py",
+                    "rules": sarif_rules,
+                }
+            },
+            "results": results,
+        }],
+    }
+    return json.dumps(sarif, indent=2)
 
 
 def _count_by_severity(findings: List[Finding]) -> dict:

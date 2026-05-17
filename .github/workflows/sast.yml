@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  security-events: write
+  contents: read
+
 jobs:
   sast:
     name: Static Security Analysis
@@ -26,32 +30,34 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -v
 
-      - name: Run SAST scan — JSON report
+      - name: Run SAST scan — SARIF (GitHub Code Scanning)
         run: |
           python cli.py scanner/ \
-            --format json \
-            --output sast-report.json \
-            --severity MEDIUM \
+            --format sarif \
+            --output sast-report.sarif \
             --exclude scanner/rules/
-        continue-on-error: true  # don't skip artifact upload on findings
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: sast-report.sarif
 
       - name: Run SAST scan — HTML report
         run: |
           python cli.py scanner/ \
             --format html \
             --output sast-report.html \
-            --severity MEDIUM \
             --exclude scanner/rules/
         continue-on-error: true
 
-      - name: Upload SAST reports
+      - name: Upload HTML report artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sast-reports
-          path: |
-            sast-report.json
-            sast-report.html
+          name: sast-html-report
+          path: sast-report.html
 
       - name: Fail on CRITICAL or HIGH findings
         run: |

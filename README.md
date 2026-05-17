@@ -1,6 +1,22 @@
 # sast-scanner-py
 
-A lightweight **Static Application Security Testing (SAST)** tool that detects security vulnerabilities in Java and Python source code. Zero dependencies beyond the Python standard library.
+[![SAST Scan](https://github.com/nicolasvl11/sast-scanner-py/actions/workflows/sast.yml/badge.svg)](https://github.com/nicolasvl11/sast-scanner-py/actions/workflows/sast.yml)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![Rules](https://img.shields.io/badge/rules-25-critical?color=dc2626)
+![Languages](https://img.shields.io/badge/languages-Java%20%7C%20Python-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+A lightweight **Static Application Security Testing (SAST)** tool that detects security vulnerabilities in Java and Python source code. Zero external dependencies — pure Python standard library.
+
+Findings appear inline in GitHub PRs via [GitHub Code Scanning](https://docs.github.com/en/code-security/code-scanning) (SARIF output).
+
+---
+
+## Demo
+
+![SAST Scanner console output](docs/demo-console.png)
+
+> HTML report with severity breakdown, CWE references, and expandable remediation guidance.
 
 ---
 
@@ -14,6 +30,7 @@ A lightweight **Static Application Security Testing (SAST)** tool that detects s
 | Code Injection | `eval()`, `exec()`, `ScriptEngine.eval` | CWE-94 |
 | Unsafe Deserialization | `ObjectInputStream`, `pickle.loads`, `yaml.load`, XStream | CWE-502 |
 | Path Traversal | `new File(userInput)`, `open(request.args...)`, unsafe uploads | CWE-22 |
+| XSS | `response.getWriter().write(+)`, `Markup(request.)`, `render_template_string`, `\|safe` | CWE-79 |
 
 Findings are sorted by severity: **CRITICAL → HIGH → MEDIUM → LOW**
 
@@ -21,6 +38,13 @@ Findings are sorted by severity: **CRITICAL → HIGH → MEDIUM → LOW**
 
 ## Quick Start
 
+### Option A — pip install
+```bash
+pip install git+https://github.com/nicolasvl11/sast-scanner-py.git
+sast-scan ./my-project --format html --output report.html
+```
+
+### Option B — clone and run
 ```bash
 # Clone and install
 git clone https://github.com/YOUR_USERNAME/sast-scanner-py

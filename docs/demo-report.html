@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAST Scan Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; }
+  header { background: #0f172a; color: white; padding: 1.5rem 2rem; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header p { opacity: .7; font-size: .85rem; margin-top: .25rem; }
+  .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+  .summary { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+  .card { background: white; border-radius: 8px; padding: 1.25rem 1.5rem; flex: 1; min-width: 120px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .card-count { font-size: 2rem; font-weight: 800; }
+  .card-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin-top: .25rem; }
+  .total-card { background: #0f172a; color: white; }
+  .total-card .card-count { color: white; }
+  .total-card .card-label { color: #94a3b8; }
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  th { background: #0f172a; color: white; padding: .75rem 1rem; text-align: left; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: .85rem 1rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; font-size: .88rem; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: .2rem .55rem; border-radius: 4px; color: white; font-size: .75rem; font-weight: 700; }
+  .filepath { font-family: monospace; font-size: .8rem; color: #1d4ed8; }
+  pre.code-snippet { background: #1e293b; color: #e2e8f0; padding: .5rem .75rem; border-radius: 4px; font-size: .78rem; margin-top: .4rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  details summary { cursor: pointer; color: #4f46e5; font-size: .82rem; margin-top: .4rem; }
+  details p { margin-top: .4rem; font-size: .82rem; line-height: 1.5; }
+  a { color: #4f46e5; }
+  .meta { color: #64748b; font-size: .82rem; margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SAST Security Scan Report</h1>
+  <p>Target: <strong>tests/fixtures/</strong> &nbsp;|&nbsp; Scanned: 2026-05-17 14:17 UTC &nbsp;|&nbsp; Total findings: <strong>22</strong></p>
+</header>
+<div class="container">
+  <div class="summary">
+    <div class="card total-card">
+      <div class="card-count">22</div>
+      <div class="card-label">Total Findings</div>
+    </div>
+    <div class="card" style="border-left:4px solid #dc2626">
+            <div class="card-count" style="color:#dc2626">14</div>
+            <div class="card-label">CRITICAL</div>
+        </div><div class="card" style="border-left:4px solid #ea580c">
+            <div class="card-count" style="color:#ea580c">8</div>
+            <div class="card-label">HIGH</div>
+        </div><div class="card" style="border-left:4px solid #d97706">
+            <div class="card-count" style="color:#d97706">0</div>
+            <div class="card-label">MEDIUM</div>
+        </div><div class="card" style="border-left:4px solid #65a30d">
+            <div class="card-count" style="color:#65a30d">0</div>
+            <div class="card-label">LOW</div>
+        </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Severity</th>
+        <th>Rule</th>
+        <th>CWE</th>
+        <th>Finding</th>
+        <th>File Path</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SQLI-001</strong><br><small>SQL Injection via String Concatenation (Java)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank">CWE-89</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:12</code><br>
+                    <pre class="code-snippet">String query = &quot;SELECT * FROM users WHERE username = '&quot; + username + &quot;'&quot;;</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> SQL query built by concatenating user-controlled input. Attacker can manipulate query logic.</p>
+                        <p><strong>Fix:</strong> Use PreparedStatement with parameterized queries. Never concatenate user input into SQL strings.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SEC-001</strong><br><small>Hardcoded Password</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank">CWE-798</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:18</code><br>
+                    <pre class="code-snippet">private static final String DB_PASSWORD = &quot;supersecret123&quot;;</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> Password literal found in source code. If committed to version control, attackers with repo access can extract credentials.</p>
+                        <p><strong>Fix:</strong> Use environment variables or a secrets manager (AWS Secrets Manager, HashiCorp Vault, .env file excluded from git).</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SEC-002</strong><br><small>Hardcoded API Key or Token</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank">CWE-798</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:21</code><br>
+                    <pre class="code-snippet">private static final String API_KEY = &quot;sk-live-abc123XYZ789secretkey&quot;;</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> API key or token literal in source code. Can be extracted and abused by anyone with repo access.</p>
+                        <p><strong>Fix:</strong> Load from environment: os.getenv('API_KEY') or System.getenv('API_KEY'). Add to .gitignore any .env files.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>CMD-001</strong><br><small>OS Command Injection via Runtime.exec (Java)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank">CWE-78</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:25</code><br>
+                    <pre class="code-snippet">Runtime.getRuntime().exec(&quot;generate-report.sh &quot; + reportName);</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> Runtime.exec() called with dynamic input enables command injection. Attacker can execute arbitrary OS commands.</p>
+                        <p><strong>Fix:</strong> Avoid executing OS commands. If necessary, use a fixed command with a validated allowlist of arguments. Never pass user input.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>DESER-001</strong><br><small>Unsafe Java Deserialization (ObjectInputStream)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank">CWE-502</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:30</code><br>
+                    <pre class="code-snippet">ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> ObjectInputStream.readObject() deserializes untrusted data. Attackers can craft malicious serialized objects to achieve RCE (see Apache Commons exploit chains).</p>
+                        <p><strong>Fix:</strong> Avoid Java serialization for untrusted data. Use JSON/XML with schema validation. If serialization required, implement a ValidatingObjectInputStream with an allowlist.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>DESER-001</strong><br><small>Unsafe Java Deserialization (ObjectInputStream)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank">CWE-502</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:31</code><br>
+                    <pre class="code-snippet">return ois.readObject();</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> ObjectInputStream.readObject() deserializes untrusted data. Attackers can craft malicious serialized objects to achieve RCE (see Apache Commons exploit chains).</p>
+                        <p><strong>Fix:</strong> Avoid Java serialization for untrusted data. Use JSON/XML with schema validation. If serialization required, implement a ValidatingObjectInputStream with an allowlist.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SEC-001</strong><br><small>Hardcoded Password</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank">CWE-798</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:14</code><br>
+                    <pre class="code-snippet">DB_PASSWORD = &quot;admin123&quot;</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> Password literal found in source code. If committed to version control, attackers with repo access can extract credentials.</p>
+                        <p><strong>Fix:</strong> Use environment variables or a secrets manager (AWS Secrets Manager, HashiCorp Vault, .env file excluded from git).</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SEC-002</strong><br><small>Hardcoded API Key or Token</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank">CWE-798</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:17</code><br>
+                    <pre class="code-snippet">API_KEY = &quot;sk-prod-XYZ789abcdefghijklmnop&quot;</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> API key or token literal in source code. Can be extracted and abused by anyone with repo access.</p>
+                        <p><strong>Fix:</strong> Load from environment: os.getenv('API_KEY') or System.getenv('API_KEY'). Add to .gitignore any .env files.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SQLI-002</strong><br><small>SQL Injection via String Formatting (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank">CWE-89</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:23</code><br>
+                    <pre class="code-snippet">cursor.execute(f&quot;SELECT * FROM users WHERE username = '{username}'&quot;)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> SQL query built with f-string, % formatting, or .format(). Attacker can inject arbitrary SQL.</p>
+                        <p><strong>Fix:</strong> Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>SQLI-002</strong><br><small>SQL Injection via String Formatting (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank">CWE-89</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:30</code><br>
+                    <pre class="code-snippet">cursor.execute(&quot;SELECT * FROM products WHERE id = %s&quot; % product_id)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> SQL query built with f-string, % formatting, or .format(). Attacker can inject arbitrary SQL.</p>
+                        <p><strong>Fix:</strong> Use parameterized queries: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>CMD-002</strong><br><small>OS Command Injection via subprocess (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/78.html" target="_blank">CWE-78</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:35</code><br>
+                    <pre class="code-snippet">result = subprocess.run(f&quot;ping -c 1 {host}&quot;, shell=True, capture_output=True)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> subprocess called with shell=True or os.system() allows command injection through shell metacharacters.</p>
+                        <p><strong>Fix:</strong> Use subprocess.run() with shell=False and a list of arguments. Validate and sanitize all inputs.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>CMD-003</strong><br><small>Code Injection via eval/exec (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/94.html" target="_blank">CWE-94</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:42</code><br>
+                    <pre class="code-snippet">return str(eval(expr))</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> eval() or exec() executing dynamic code. If input is user-controlled, attacker can run arbitrary Python.</p>
+                        <p><strong>Fix:</strong> Avoid eval/exec entirely. Use ast.literal_eval() for safe evaluation of literals, or redesign the logic.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>DESER-002</strong><br><small>Unsafe Python Pickle Deserialization</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank">CWE-502</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:48</code><br>
+                    <pre class="code-snippet">obj = pickle.loads(raw)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> pickle.loads() on untrusted data enables arbitrary code execution. The __reduce__ method can define any OS command to run on deserialization.</p>
+                        <p><strong>Fix:</strong> Never unpickle data from untrusted sources. Use json, msgpack, or protobuf instead. If pickle is required, sign and verify payloads before deserializing.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fef2f2">
+                <td><span class="badge" style="background:#dc2626">CRITICAL</span></td>
+                <td><strong>XSS-005</strong><br><small>render_template_string with User Input (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/79.html" target="_blank">CWE-79</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:78</code><br>
+                    <pre class="code-snippet">return render_template_string(request.args.get(&quot;t&quot;, &quot;&quot;))</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> render_template_string() with user-controlled template string is both an XSS and Server-Side Template Injection (SSTI) vulnerability. Attacker can execute arbitrary code via {{config.__class__.__init__.__globals__['os'].popen('id').read()}}.</p>
+                        <p><strong>Fix:</strong> Never pass user input to render_template_string(). Use render_template() with a fixed template file and pass user data as variables.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>PATH-001</strong><br><small>Path Traversal via File Constructor (Java)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank">CWE-22</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:37</code><br>
+                    <pre class="code-snippet">File file = new File(&quot;/var/data/&quot; + filename);</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> File or Path constructed with user-controlled input. Attacker can use '../../../etc/passwd' to access files outside intended directory.</p>
+                        <p><strong>Fix:</strong> Normalize the path and verify it starts with the expected base directory: path.toRealPath().startsWith(basePath). Reject inputs containing '..'.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>PATH-003</strong><br><small>Path Traversal in File Upload (Java)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank">CWE-22</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:43</code><br>
+                    <pre class="code-snippet">String filename = file.getOriginalFilename();</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> File saved using client-supplied filename. Attacker can supply '../../../etc/cron.d/evil' to write outside intended directory.</p>
+                        <p><strong>Fix:</strong> Generate a server-side UUID for the filename. If the original name is needed for display, store it in a database, never use it for the filesystem path.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>PATH-001</strong><br><small>Path Traversal via File Constructor (Java)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank">CWE-22</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:44</code><br>
+                    <pre class="code-snippet">file.transferTo(new File(&quot;/uploads/&quot; + filename));</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> File or Path constructed with user-controlled input. Attacker can use '../../../etc/passwd' to access files outside intended directory.</p>
+                        <p><strong>Fix:</strong> Normalize the path and verify it starts with the expected base directory: path.toRealPath().startsWith(basePath). Reject inputs containing '..'.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>XSS-001</strong><br><small>Reflected XSS via HttpServletResponse (Java)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/79.html" target="_blank">CWE-79</a></td>
+                <td>
+                    <code class="filepath">VulnerableService.java:50</code><br>
+                    <pre class="code-snippet">response.getWriter().write(&quot;&lt;h1&gt;Hello &quot; + name + &quot;&lt;/h1&gt;&quot;);</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> User-controlled input written directly to HTTP response without encoding. Browser will execute injected scripts.</p>
+                        <p><strong>Fix:</strong> Use OWASP Java Encoder: Encode.forHtml(userInput) before writing to response. Or use a templating engine with auto-escaping (Thymeleaf th:text, not th:utext).</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_java\VulnerableService.java</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>DESER-003</strong><br><small>Unsafe YAML Load (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/502.html" target="_blank">CWE-502</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:53</code><br>
+                    <pre class="code-snippet">return yaml.load(config_str)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> yaml.load() without Loader=yaml.SafeLoader can deserialize arbitrary Python objects, enabling code execution.</p>
+                        <p><strong>Fix:</strong> Replace yaml.load(data) with yaml.safe_load(data) or yaml.load(data, Loader=yaml.SafeLoader).</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>PATH-002</strong><br><small>Path Traversal via open() (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank">CWE-22</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:59</code><br>
+                    <pre class="code-snippet">with open(&quot;/var/data/&quot; + filename) as f:</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> File opened with path derived from request data. Attacker can traverse to arbitrary files using '../' sequences.</p>
+                        <p><strong>Fix:</strong> Use os.path.realpath() and verify the result starts with the allowed base directory. Use pathlib.Path.resolve() similarly.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>PATH-004</strong><br><small>Path Traversal in File Upload (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/22.html" target="_blank">CWE-22</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:66</code><br>
+                    <pre class="code-snippet">f.save(f&quot;/uploads/{f.filename}&quot;)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> File saved using client-supplied filename from request. Attacker controls where the file is written.</p>
+                        <p><strong>Fix:</strong> Use werkzeug.utils.secure_filename() and still verify the result path. Better: generate a UUID filename.</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+            <tr style="background:#fff7ed">
+                <td><span class="badge" style="background:#ea580c">HIGH</span></td>
+                <td><strong>XSS-004</strong><br><small>Flask Markup() Marks User Input as Safe (Python)</small></td>
+                <td><a href="https://cwe.mitre.org/data/definitions/79.html" target="_blank">CWE-79</a></td>
+                <td>
+                    <code class="filepath">vulnerable_app.py:73</code><br>
+                    <pre class="code-snippet">return Markup(&quot;&lt;h1&gt;Hello &quot; + name + &quot;&lt;/h1&gt;&quot;)</pre>
+                    <details>
+                        <summary>Description &amp; Remediation</summary>
+                        <p><strong>Issue:</strong> Markup() tells Jinja2 to render the string as raw HTML without escaping. If the input is user-controlled, attacker injects arbitrary scripts.</p>
+                        <p><strong>Fix:</strong> Never wrap user-controlled input in Markup(). Let Jinja2 auto-escape by using {{ variable }} in templates (not {{ variable|safe }}).</p>
+                    </details>
+                </td>
+                <td><small style="color:#555">tests\fixtures\vulnerable_python\vulnerable_app.py</small></td>
+            </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

@@ -115,6 +115,47 @@ class TestSeverityOrdering:
         assert orders == sorted(orders), "Findings not sorted by severity"
 
 
+class TestXSS:
+    def test_java_response_writer_xss(self, scanner):
+        findings = scanner.scan_path(str(JAVA_FIXTURE))
+        matches = findings_by_rule(findings, "XSS-001")
+        assert len(matches) >= 1
+        assert matches[0].severity == Severity.HIGH
+        assert matches[0].cwe == "CWE-79"
+
+    def test_python_markup_user_input(self, scanner):
+        findings = scanner.scan_path(str(PYTHON_FIXTURE))
+        matches = findings_by_rule(findings, "XSS-004")
+        assert len(matches) >= 1
+
+    def test_python_render_template_string_ssti(self, scanner):
+        findings = scanner.scan_path(str(PYTHON_FIXTURE))
+        matches = findings_by_rule(findings, "XSS-005")
+        assert len(matches) >= 1
+        assert matches[0].severity == Severity.CRITICAL
+
+
+class TestSARIF:
+    def test_sarif_output_valid_json(self, scanner):
+        from scanner.reporter import to_sarif
+        findings = scanner.scan_path(str(FIXTURES))
+        output = to_sarif(findings, str(FIXTURES))
+        import json
+        sarif = json.loads(output)
+        assert sarif["version"] == "2.1.0"
+        assert len(sarif["runs"]) == 1
+        assert len(sarif["runs"][0]["results"]) == len(findings)
+
+    def test_sarif_severity_mapping(self, scanner):
+        from scanner.reporter import to_sarif
+        import json
+        findings = scanner.scan_path(str(FIXTURES))
+        sarif = json.loads(to_sarif(findings, str(FIXTURES)))
+        results = sarif["runs"][0]["results"]
+        critical_results = [r for r in results if r["level"] == "error"]
+        assert len(critical_results) > 0
+
+
 class TestCleanCode:
     def test_no_false_positives_on_comment_lines(self, scanner):
         """Comment-only lines should not generate findings."""

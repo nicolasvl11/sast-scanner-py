@@ -14,7 +14,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 from scanner.engine import Scanner
-from scanner.reporter import to_html, to_json
+from scanner.reporter import to_html, to_json, to_sarif
 from scanner.rules.base import Severity
 
 SEVERITY_SYMBOL = {
@@ -68,6 +68,36 @@ def print_console(findings, target):
     return 1 if (critical + high) > 0 else 0
 
 
+def _write_file_report(content: str, output_path: str, label: str, findings) -> None:
+    Path(output_path).write_text(content, encoding="utf-8")
+    print(f"{label} written to {output_path} ({len(findings)} finding(s))")
+
+
+def _filter_severity(findings, min_severity: str):
+    from scanner.engine import SEVERITY_ORDER
+    min_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}[min_severity]
+    return [f for f in findings if SEVERITY_ORDER[f.severity] <= min_order]
+
+
+def _emit(fmt: str, findings, target: str, output: str | None) -> int:
+    if fmt == "console":
+        return print_console(findings, target)
+    if fmt == "json":
+        content = to_json(findings, target)
+        if output:
+            _write_file_report(content, output, "JSON report", findings)
+        else:
+            print(content)
+        return 1 if findings else 0
+    if fmt == "html":
+        _write_file_report(to_html(findings, target), output or "sast-report.html", "HTML report", findings)
+        return 1 if findings else 0
+    if fmt == "sarif":
+        _write_file_report(to_sarif(findings, target), output or "sast-report.sarif", "SARIF report", findings)
+        return 1 if findings else 0
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="SAST Scanner — detect security vulnerabilities in Java and Python source code"
@@ -75,11 +105,11 @@ def main():
     parser.add_argument("path", help="File or directory to scan")
     parser.add_argument(
         "--format",
-        choices=["console", "json", "html"],
+        choices=["console", "json", "html", "sarif"],
         default="console",
         help="Output format (default: console)",
     )
-    parser.add_argument("--output", help="Output file path (required for html/json formats)")
+    parser.add_argument("--output", help="Output file path (required for html/json/sarif formats)")
     parser.add_argument(
         "--severity",
         choices=["CRITICAL", "HIGH", "MEDIUM", "LOW"],
@@ -99,31 +129,12 @@ def main():
         sys.exit(2)
 
     exclude_patterns = [p.strip() for p in args.exclude.split(",") if p.strip()]
-    scanner = Scanner(exclude_patterns=exclude_patterns)
-    findings = scanner.scan_path(target)
+    findings = Scanner(exclude_patterns=exclude_patterns).scan_path(target)
 
     if args.severity:
-        min_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}[args.severity]
-        from scanner.engine import SEVERITY_ORDER
-        findings = [f for f in findings if SEVERITY_ORDER[f.severity] <= min_order]
+        findings = _filter_severity(findings, args.severity)
 
-    if args.format == "console":
-        exit_code = print_console(findings, target)
-        sys.exit(exit_code)
-    elif args.format == "json":
-        output = to_json(findings, target)
-        if args.output:
-            Path(args.output).write_text(output, encoding="utf-8")
-            print(f"JSON report written to {args.output}")
-        else:
-            print(output)
-        sys.exit(1 if findings else 0)
-    elif args.format == "html":
-        output = to_html(findings, target)
-        out_path = args.output or "sast-report.html"
-        Path(out_path).write_text(output, encoding="utf-8")
-        print(f"HTML report written to {out_path} ({len(findings)} finding(s))")
-        sys.exit(1 if findings else 0)
+    sys.exit(_emit(args.format, findings, target, args.output))
 
 
 if __name__ == "__main__":
