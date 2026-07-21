@@ -5,7 +5,7 @@ build-backend = "setuptools.backends.legacy:build"
 [project]
 name = "sast-scanner"
 version = "1.0.0"
-description = "SAST tool that detects SQLi, hardcoded secrets, command injection, unsafe deserialization, path traversal and XSS in Java and Python code"
+description = "SAST + DAST scanner with CVSS v3.1 scoring and OWASP Top 10 mapping for Java and Python apps"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}

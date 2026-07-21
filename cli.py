@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-sast-scanner — static application security testing tool
-Usage: python cli.py <path> [--format html|json|console] [--output <file>]
+sast-scanner — application security testing (SAST + DAST)
+
+Usage:
+  python cli.py <path>                         # SAST scan (legacy form, still supported)
+  python cli.py scan <path> [--format ...]     # SAST scan (explicit)
+  python cli.py dast <url> [--format ...]       # DAST scan of a running target
+  python cli.py unified --sast-path <path> --dast-url <url> [--format ...]
 """
 import argparse
 import io
@@ -98,43 +103,96 @@ def _emit(fmt: str, findings, target: str, output: str | None) -> int:
     return 0
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="SAST Scanner — detect security vulnerabilities in Java and Python source code"
-    )
+# --- unified (SAST + DAST) emission -----------------------------------------
+
+def _emit_unified(fmt: str, findings, target: str, output: str | None) -> int:
+    from scanner.core import report
+    if fmt == "console":
+        return report.print_console(findings, target)
+    if fmt == "json":
+        content = report.to_json(findings, target)
+        if output:
+            _write_file_report(content, output, "JSON report", findings)
+        else:
+            print(content)
+    elif fmt == "html":
+        _write_file_report(report.to_html(findings, target), output or "appsec-report.html", "HTML report", findings)
+    crit_high = sum(1 for f in findings if f.cvss_severity in ("CRITICAL", "HIGH"))
+    return 1 if crit_high else 0
+
+
+def _run_sast(path: str, exclude: str):
+    exclude_patterns = [p.strip() for p in exclude.split(",") if p.strip()]
+    return Scanner(exclude_patterns=exclude_patterns).scan_path(path)
+
+
+# --- subcommands -------------------------------------------------------------
+
+def cmd_sast(argv) -> int:
+    parser = argparse.ArgumentParser(prog="cli.py scan", description="SAST scan of source code")
     parser.add_argument("path", help="File or directory to scan")
-    parser.add_argument(
-        "--format",
-        choices=["console", "json", "html", "sarif"],
-        default="console",
-        help="Output format (default: console)",
-    )
-    parser.add_argument("--output", help="Output file path (required for html/json/sarif formats)")
-    parser.add_argument(
-        "--severity",
-        choices=["CRITICAL", "HIGH", "MEDIUM", "LOW"],
-        default=None,
-        help="Minimum severity to report",
-    )
-    parser.add_argument(
-        "--exclude",
-        help="Comma-separated path patterns to exclude (e.g. tests/,migrations/,*_test.py)",
-        default="",
-    )
-    args = parser.parse_args()
+    parser.add_argument("--format", choices=["console", "json", "html", "sarif"], default="console")
+    parser.add_argument("--output", help="Output file path (for html/json/sarif)")
+    parser.add_argument("--severity", choices=["CRITICAL", "HIGH", "MEDIUM", "LOW"], default=None)
+    parser.add_argument("--exclude", default="", help="Comma-separated path patterns to exclude")
+    args = parser.parse_args(argv)
 
-    target = args.path
-    if not Path(target).exists():
-        print(f"Error: path '{target}' does not exist.", file=sys.stderr)
-        sys.exit(2)
+    if not Path(args.path).exists():
+        print(f"Error: path '{args.path}' does not exist.", file=sys.stderr)
+        return 2
 
-    exclude_patterns = [p.strip() for p in args.exclude.split(",") if p.strip()]
-    findings = Scanner(exclude_patterns=exclude_patterns).scan_path(target)
-
+    findings = _run_sast(args.path, args.exclude)
     if args.severity:
         findings = _filter_severity(findings, args.severity)
+    return _emit(args.format, findings, args.path, args.output)
 
-    sys.exit(_emit(args.format, findings, target, args.output))
+
+def cmd_dast(argv) -> int:
+    from scanner.dast.runner import run_dast
+    parser = argparse.ArgumentParser(prog="cli.py dast", description="DAST scan of a running target")
+    parser.add_argument("url", help="Base URL of the running application (e.g. http://localhost:8080)")
+    parser.add_argument("--format", choices=["console", "json", "html"], default="console")
+    parser.add_argument("--output", help="Output file path (for html/json)")
+    parser.add_argument("--timeout", type=float, default=15.0)
+    args = parser.parse_args(argv)
+
+    findings = run_dast(args.url, timeout=args.timeout, verbose=(args.format == "console"))
+    return _emit_unified(args.format, findings, args.url, args.output)
+
+
+def cmd_unified(argv) -> int:
+    from scanner.core.findings import UnifiedFinding
+    from scanner.dast.runner import run_dast
+    parser = argparse.ArgumentParser(prog="cli.py unified", description="Combined SAST + DAST scan")
+    parser.add_argument("--sast-path", required=True, help="Source directory for SAST")
+    parser.add_argument("--dast-url", required=True, help="Base URL for DAST")
+    parser.add_argument("--format", choices=["console", "json", "html"], default="console")
+    parser.add_argument("--output", help="Output file path (for html/json)")
+    parser.add_argument("--exclude", default="", help="Comma-separated SAST exclude patterns")
+    parser.add_argument("--timeout", type=float, default=15.0)
+    args = parser.parse_args(argv)
+
+    if not Path(args.sast_path).exists():
+        print(f"Error: sast path '{args.sast_path}' does not exist.", file=sys.stderr)
+        return 2
+
+    sast = [UnifiedFinding.from_sast(f) for f in _run_sast(args.sast_path, args.exclude)]
+    dast = run_dast(args.dast_url, timeout=args.timeout, verbose=(args.format == "console"))
+    findings = sast + dast
+    target = f"{args.sast_path} + {args.dast_url}"
+    return _emit_unified(args.format, findings, target, args.output)
+
+
+def main():
+    argv = sys.argv[1:]
+    if argv and argv[0] == "dast":
+        sys.exit(cmd_dast(argv[1:]))
+    if argv and argv[0] == "unified":
+        sys.exit(cmd_unified(argv[1:]))
+    if argv and argv[0] == "scan":
+        sys.exit(cmd_sast(argv[1:]))
+    # legacy form: `cli.py <path> [--format ...]` runs SAST directly
+    sys.exit(cmd_sast(argv))
 
 
 if __name__ == "__main__":

@@ -6,7 +6,9 @@
 ![Languages](https://img.shields.io/badge/languages-Java%20%7C%20Python-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A lightweight **Static Application Security Testing (SAST)** tool that detects security vulnerabilities in Java and Python source code. Zero external dependencies — pure Python standard library.
+A lightweight application security scanner combining **SAST** (static analysis of Java/Python
+source) and **DAST** (dynamic black-box probing of a running app), with unified CVSS v3.1
+scoring and OWASP Top 10 mapping. Zero external dependencies — pure Python standard library.
 
 Findings appear inline in GitHub PRs via [GitHub Code Scanning](https://docs.github.com/en/code-security/code-scanning) (SARIF output).
 
@@ -66,6 +68,43 @@ python cli.py /path/to/your/project --severity HIGH
 
 ---
 
+## Dynamic scanning (DAST) and unified reports
+
+Beyond static analysis, the scanner can probe a **running** application over HTTP and
+correlate both views. DAST catches classes of flaw that leave no static code signature —
+broken object-level authorization (IDOR) and `alg:none` JWT bypasses — which SAST alone
+cannot see. Findings from both engines are merged, scored with **CVSS v3.1**, and mapped
+to the **OWASP Top 10**.
+
+```bash
+# Dynamic scan of a running target (8 probes, one per OWASP class)
+python cli.py dast http://localhost:8080 --format html --output dast-report.html
+
+# Unified SAST + DAST report
+python cli.py unified \
+  --sast-path ./src \
+  --dast-url http://localhost:8080 \
+  --format html --output appsec-report.html
+```
+
+Each finding carries a computed CVSS v3.1 base score (via `scanner/core/cvss.py`, a from-scratch
+implementation of the official base-score equations) and its OWASP 2021 category. The DAST
+probes use real black-box techniques: boolean/time-based injection, canary reflection,
+differential authorization, and token forgery.
+
+| Probe | Technique | CWE |
+|---|---|---|
+| DAST-SQLI | boolean true/false differential | CWE-89 |
+| DAST-CMD | time-based blind (`; sleep N`) | CWE-78 |
+| DAST-PATH | `/etc/passwd` canary | CWE-22 |
+| DAST-IDOR | cross-user object access | CWE-639 |
+| DAST-XSS | script canary reflection | CWE-79 |
+| DAST-DESER | arbitrary-class resolution signature | CWE-502 |
+| DAST-MISCONFIG | exposed actuator/env | CWE-200 |
+| DAST-JWT | forged `alg:none` token | CWE-287 |
+
+---
+
 ## Output Examples
 
 ### Console
@@ -106,20 +145,25 @@ Opens in any browser. Findings grouped by severity with expandable descriptions 
 
 ```
 sast-scanner-py/
-├── cli.py                      # Entry point — argument parsing, output dispatch
+├── cli.py                      # Entry point — scan / dast / unified subcommands
 ├── scanner/
-│   ├── engine.py               # File walker + rule matcher
-│   ├── reporter.py             # HTML and JSON report generators
-│   └── rules/
-│       ├── base.py             # Rule, Finding, Severity, Language dataclasses
-│       ├── sql_injection.py    # SQLI-001, SQLI-002, SQLI-003
-│       ├── hardcoded_secrets.py # SEC-001 to SEC-005
-│       ├── dangerous_functions.py # CMD-001 to CMD-005
-│       ├── unsafe_deserialization.py # DESER-001 to DESER-005
-│       └── path_traversal.py  # PATH-001 to PATH-004
+│   ├── engine.py               # SAST file walker + rule matcher
+│   ├── reporter.py             # SAST HTML/JSON/SARIF report generators
+│   ├── rules/                  # SAST regex rules (SQLI, secrets, CMD, DESER, PATH, XSS)
+│   ├── core/                   # Shared SAST + DAST layer
+│   │   ├── findings.py         # UnifiedFinding model + CWE→OWASP/CVSS profiles
+│   │   ├── cvss.py             # CVSS v3.1 base-score calculator (from scratch)
+│   │   └── report.py           # Unified JSON/HTML/console reporting
+│   └── dast/                   # Dynamic scanning
+│       ├── client.py           # urllib HTTP client (zero deps)
+│       ├── probes.py           # 8 probes, one per OWASP class
+│       └── runner.py           # Probe orchestration
 └── tests/
-    ├── fixtures/               # Intentionally vulnerable code for testing
-    └── test_rules.py           # Rule coverage tests
+    ├── fixtures/               # Intentionally vulnerable code for SAST tests
+    ├── test_rules.py           # SAST rule coverage
+    ├── test_cvss.py            # CVSS calculator vs official scores
+    ├── test_findings.py        # UnifiedFinding adapter/scoring
+    └── test_dast_probes.py     # DAST probes (fake-client, vulnerable + secure)
 ```
 
 Each rule is a simple dataclass with: ID, name, severity, CWE reference, description, remediation, and regex patterns. Adding a new rule is as simple as adding to the list in the relevant file.
